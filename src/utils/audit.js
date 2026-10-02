@@ -31,7 +31,7 @@ auditEmitter.on("user.updated", async ({ actorId, entityId }) => {
   await log({
     actorId,
     action: "updated",
-    entity: "user",
+     entity: "user",
     entityId,
   });
 });

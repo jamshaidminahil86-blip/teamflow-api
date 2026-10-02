@@ -9,6 +9,8 @@ import { auditEmitter, log } from "./utils/audit.js";
 import os from "os";
 import crypto from "crypto";
 
+await logger.warn("This is a warning");
+
 const token = crypto.randomBytes(16).toString("hex");
 console.log("Token:", token);
 
