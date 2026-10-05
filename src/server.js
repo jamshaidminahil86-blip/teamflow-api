@@ -30,17 +30,17 @@ console.log("CPU:", os.cpus().length);
 console.log("Free Memory:", os.freemem());
 
 auditEmitter.emit("user.created", {
-  actorId: "user123",
+  actorId: "user 123",
   entityId: "456",
 });
 
 auditEmitter.emit("user.updated", {
-  actorId: "user123",
+  actorId: "user 123",
   entityId: "456",
 });
 
 auditEmitter.emit("user.deleted", {
-  actorId: "user123",
+  actorId: "user 123",
   entityId: "456",
 });
 
