@@ -1,7 +1,6 @@
-
+import app from "./app.js";
 import fs from "fs/promises";
 import "dotenv/config";
-import app from "./app.js";
 import logger from "./utils/logger.js";
 logger.info("Server started");
 logger.error("Test error");
