@@ -5,5 +5,9 @@ export async function hashPassword(password) {
 }
 
 export async function comparePassword(password, hashedPassword) {
+  if (!password || !hashedPassword) {
+    return false;
+  }
+
   return await bcrypt.compare(password, hashedPassword);
-}   
+}

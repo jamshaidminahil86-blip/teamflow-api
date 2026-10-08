@@ -22,7 +22,10 @@ Create a `.env` file in the root folder:
 ```env
 PORT=5000
 NODE_ENV=development
+JWT_SECRET=your-super-secret-key
 ```
+
+If `JWT_SECRET` is not set, the app falls back to a local development secret so auth routes can still run in local debugging sessions.
 
 ## Run Development Server
 

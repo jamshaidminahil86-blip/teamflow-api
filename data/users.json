@@ -14,5 +14,17 @@
     "name": "Test User",
     "email": "test@gmail.com",
     "password": "$2b$10$Eb0QBw1DmXSGIhFrUUHNFOAXuinWBBkxmT8gpZ7YKOqiJKGQbjbLq"
+  },
+  {
+    "id": 4,
+    "name": "A",
+    "email": "a@b.com",
+    "password": "$2b$10$0aWn1ZnrdDa/dVzPV9pfOO2nlLwlGisy5bkcbZxWiOLAfJ54lRMWe"
+  },
+  {
+    "id": 5,
+    "name": "Debug User",
+    "email": "debug-test-1089e93f@example.com",
+    "password": "$2b$10$JHqSLRF3JMIG/WgBdW1KtOziC.q4ILyE4Pfnp/kInM/2xaMSEdTZO"
   }
 ]

@@ -5,7 +5,7 @@ import {
 } from "../validators/auth.validator.js";
 
 import {
-  hashPassword,
+  hashPassword, 
   comparePassword,
 } from "../utils/password.js";
 
@@ -19,6 +19,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "../utils/jwt.js";
+const revokedRefreshTokens = new Set();
 
 export async function register(req, res) {
   const errors = validateRegister(req.body);
@@ -47,7 +48,7 @@ export async function register(req, res) {
 }
 
 export async function login(req, res) {
-  const errors = validateLogin(req.body);
+  const errors =  validateLogin(req.body);
 
   if (errors) {
     return res.status(400).json({
@@ -56,28 +57,27 @@ export async function login(req, res) {
     });
   }
 
-  const user = await getUserByEmail(req.body.email);
+ const user = await getUserByEmail(req.body.email);
 
-  if (!user) {
-    return res.status(401).json({
-      message: "Invalid email or password",
-    });
-  }
+if (!user || !user.password) {
+  return res.status(401).json({
+    message: "Invalid email or password",
+  });
+}
 
-  const isPasswordCorrect = await comparePassword(
-    req.body.password,
-    user.password
-  );
+const isPasswordCorrect = await comparePassword(
+  req.body.password,
+  user.password
+);
 
-  if (!isPasswordCorrect) {
-    return res.status(401).json({
-      message: "Invalid email or password",
-    });
-  }
+if (!isPasswordCorrect) {
+  return res.status(401).json({
+    message: "Invalid email or password",
+  });
+}
 
-  const accessToken = generateAccessToken(user);
-  const refreshToken = generateRefreshToken(user);
-
+const accessToken = generateAccessToken(user);
+const refreshToken = generateRefreshToken(user);
   return res.status(200).json({
     message: "Login successful",
     accessToken,
@@ -99,5 +99,56 @@ export async function getMe(req, res) {
       name: user.name,
       email: user.email,
     },
+  });
+}
+
+export async function refresh(req, res) {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(401).json({
+      message: "Refresh token required",
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.JWT_SECRET || "teamflow-dev-secret"
+    );
+
+    const newAccessToken = generateAccessToken({
+      id: decoded.id,
+      email: decoded.email,
+    });
+
+    return res.status(200).json({
+      accessToken: newAccessToken,
+    });
+  } catch (error) {
+    return res.status(401).json({
+      message: "Invalid or expired refresh token",
+    });
+  }
+}
+export async function logout(req, res) {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(400).json({
+      message: "Refresh token required",
+    });
+  }
+
+  if (revokedRefreshTokens.has(refreshToken)) {
+    return res.status(400).json({
+      message: "Refresh token already revoked",
+    });
+  }
+
+  revokedRefreshTokens.add(refreshToken);
+
+  return res.status(200).json({
+    message: "Logout successful",
   });
 }
