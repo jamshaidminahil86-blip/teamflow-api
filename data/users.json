@@ -8,5 +8,11 @@
     "id": 2,
     "name": "Suli",
     "email": "suli@gmail.com"
+  },
+  {
+    "id": 3,
+    "name": "Test User",
+    "email": "test@gmail.com",
+    "password": "$2b$10$Eb0QBw1DmXSGIhFrUUHNFOAXuinWBBkxmT8gpZ7YKOqiJKGQbjbLq"
   }
 ]

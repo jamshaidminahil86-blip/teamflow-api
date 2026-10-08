@@ -94,8 +94,16 @@ async function deleteUser(userId) {
   return deletedUser;
 }
 
+async function getUserByEmail(email) {
+  const users = await readUsers();
+
+  return users.find(
+    (user) => user.email.toLowerCase() === email.toLowerCase()
+  );
+}
 export {
   getUser,
+  getUserByEmail,
   getUsers,
   createUser,
   updateUser,

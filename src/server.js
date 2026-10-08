@@ -1,6 +1,7 @@
-import app from "./app.js";
-import fs from "fs/promises";
 import "dotenv/config";
+import app from "./app.js";
+console.log("JWT_SECRET loaded:", Boolean(process.env.JWT_SECRET));
+import fs from "fs/promises";
 import logger from "./utils/logger.js";
 logger.info("Server started");
 logger.error("Test error");
