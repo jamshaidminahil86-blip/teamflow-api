@@ -1,65 +1,49 @@
-import { NotFoundError } from "../errors/service.errors.js";
+import prisma from "../config/prisma.js";
 
-const projects = [
-  {
-    id: 1,
-    name: "TeamFlow",
-    description: "Team management project",
-  },
-  {
-    id: 2,
-    name: "E-Commerce",
-    description: "Online shopping project",
-  },
-];
+export async function createProjectWithInitialTask({
+  name,
+  description,
+  ownerId,
+  initialTaskTitle,
+}) {
+  return prisma.$transaction(async (tx) => {
+    const owner = await tx.user.findUnique({
+      where: { id: Number(ownerId) },
+      select: { id: true },
+    });
 
-export async function getProjects() {
-  return projects;
-}
+    // 1. Create Project
+    const project = await tx.project.create({
+      data: {
+        name,
+        description,
+        ownerId: Number(ownerId),
+      },
+    });
 
-export async function getProjectById(projectId) {
-  const project = projects.find((project) => project.id === Number(projectId));
+    // 2. Create initial Task
+    const task = await tx.task.create({
+      data: {
+        title: initialTaskTitle,
+        projectId: project.id,
+        createdById: owner?.id ?? null,
+      },
+    });
 
-  if (!project) {
-    throw new NotFoundError("Project not found");
-  }
+    // 3. Create Audit Log
+    const auditLog = await tx.auditLog.create({
+      data: {
+        action: "PROJECT_CREATED",
+        entityType: "Project",
+        entityId: project.id,
+        userId: owner?.id ?? null,
+        projectId: project.id,
+        details: {
+          message: "Project and initial task created together",
+        },
+      },
+    });
 
-  return project;
-}
-
-export async function createProject(projectData) {
-  const newProject = {
-    id: projects.length + 1,
-    ...projectData,
-  };
-
-  projects.push(newProject);
-
-  return newProject;
-}
-
-export async function updateProject(projectId, projectData) {
-  const project = projects.find((project) => project.id === Number(projectId));
-
-  if (!project) {
-    throw new NotFoundError("Project not found");
-  }
-
-  Object.assign(project, projectData);
-
-  return project;
-}
-
-export async function deleteProject(projectId) {
-  const index = projects.findIndex(
-    (project) => project.id === Number(projectId)
-  );
-
-  if (index === -1) {
-    throw new NotFoundError("Project not found");
-  }
-
-  const deletedProject = projects.splice(index, 1);
-
-  return deletedProject[0];
+    return { project, task, auditLog };
+  });
 }

@@ -1,27 +1,11 @@
+
+import prisma from "../config/prisma.js";
 import { NotFoundError } from "../errors/service.errors.js";
-import { readFile, writeFile } from "node:fs/promises";
-
-const usersFilePath = new URL("../../data/users.json", import.meta.url);
-
-async function readUsers() {
-  const usersData = await readFile(usersFilePath, "utf8");
-
-  return JSON.parse(usersData);
-}
-
-async function writeUsers(users) {
-  await writeFile(
-    usersFilePath,
-    JSON.stringify(users, null, 2)
-  );
-}
 
 async function getUser(userId) {
-  const users = await readUsers();
-
-  const user = users.find(
-    (user) => user.id === Number(userId)
-  );
+  const user = await prisma.user.findUnique({
+    where: { id: Number(userId) },
+  });
 
   if (!user) {
     throw new NotFoundError("User not found");
@@ -31,45 +15,42 @@ async function getUser(userId) {
 }
 
 async function getUsers() {
-  return readUsers();
+  return prisma.user.findMany({
+    orderBy: { id: "asc" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      departmentId: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 }
 
 async function createUser(userData) {
-  const users = await readUsers();
-
-  const newUser = {
-    id: users.length
-      ? Math.max(...users.map((user) => user.id)) + 1
-      : 1,
-    ...userData,
-  };
-
-  users.push(newUser);
-
-  await writeUsers(users);
-
-  return newUser;
+  return prisma.user.create({
+    data: {
+      ...userData,
+      email: userData.email.toLowerCase(),
+    },
+  });
 }
 
 async function updateUser(userId, userData) {
-  const users = await readUsers();
+  await getUser(userId);
 
-  const index = users.findIndex(
-    (user) => user.id === Number(userId)
-  );
+  const data = { ...userData };
 
-  if (index === -1) {
-    throw new NotFoundError("User not found");
+  if (data.email) {
+    data.email = data.email.toLowerCase();
   }
 
-  users[index] = {
-    ...users[index],
-    ...userData,
-  };
-
-  await writeUsers(users);
-
-  return users[index];
+  return prisma.user.update({
+    where: { id: Number(userId) },
+    data,
+  });
 }
 
 async function patchUser(userId, userData) {
@@ -77,30 +58,19 @@ async function patchUser(userId, userData) {
 }
 
 async function deleteUser(userId) {
-  const users = await readUsers();
+  await getUser(userId);
 
-  const index = users.findIndex(
-    (user) => user.id === Number(userId)
-  );
-
-  if (index === -1) {
-    throw new NotFoundError("User not found");
-  }
-
-  const deletedUser = users.splice(index, 1)[0];
-
-  await writeUsers(users);
-
-  return deletedUser;
+  return prisma.user.delete({
+    where: { id: Number(userId) },
+  });
 }
 
 async function getUserByEmail(email) {
-  const users = await readUsers();
-
-  return users.find(
-    (user) => user.email.toLowerCase() === email.toLowerCase()
-  );
+  return prisma.user.findUnique({
+    where: { email: email.toLowerCase() },
+  });
 }
+
 export {
   getUser,
   getUserByEmail,

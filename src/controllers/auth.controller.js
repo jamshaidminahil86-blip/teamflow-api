@@ -78,16 +78,17 @@ if (!isPasswordCorrect) {
 
 const accessToken = generateAccessToken(user);
 const refreshToken = generateRefreshToken(user);
-  return res.status(200).json({
-    message: "Login successful",
-    accessToken,
-    refreshToken,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-    },
-  });
+
+return res.status(200).json({
+  message: "Login successful",
+  accessToken,
+  refreshToken,
+  user: {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+  },
+});
 }
 
 export async function getMe(req, res) {
