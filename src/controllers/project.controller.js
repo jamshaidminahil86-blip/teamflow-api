@@ -1,4 +1,12 @@
-import { createProjectWithInitialTask } from "../services/project.service.js";
+import {
+  createProjectWithInitialTask,
+  getProjects,
+} from "../services/project.service.js";
+
+export async function getAllProjects(req, res) {
+  const projects = await getProjects();
+  res.status(200).json({ data: projects });
+}
 
 export async function createProject(req, res) {
 const result = await createProjectWithInitialTask({

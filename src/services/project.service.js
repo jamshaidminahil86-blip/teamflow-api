@@ -1,4 +1,21 @@
+
 import prisma from "../config/prisma.js";
+
+export async function getProjects() {
+  return prisma.project.findMany({
+    orderBy: {
+      id: "asc",
+    },
+  });
+}
+
+export async function getProjectById(id) {
+  return prisma.project.findUnique({
+    where: {
+      id: Number(id),
+    },
+  });
+}
 
 export async function createProjectWithInitialTask({
   name,
@@ -7,39 +24,46 @@ export async function createProjectWithInitialTask({
   initialTaskTitle,
 }) {
   return prisma.$transaction(async (tx) => {
+    const numericOwnerId = Number(ownerId);
+
     const owner = await tx.user.findUnique({
-      where: { id: Number(ownerId) },
+      where: { id: numericOwnerId },
       select: { id: true },
     });
 
-    // 1. Create Project
+    if (!owner) {
+      throw new Error("Valid project owner not found");
+    }
+
     const project = await tx.project.create({
       data: {
         name,
-        description,
-        ownerId: Number(ownerId),
+        description: description || null,
+        ownerId: numericOwnerId,
       },
     });
 
-    // 2. Create initial Task
-    const task = await tx.task.create({
-      data: {
-        title: initialTaskTitle,
-        projectId: project.id,
-        createdById: owner?.id ?? null,
-      },
-    });
+    let task = null;
 
-    // 3. Create Audit Log
+    if (initialTaskTitle?.trim()) {
+      task = await tx.task.create({
+        data: {
+          title: initialTaskTitle.trim(),
+          projectId: project.id,
+          createdById: owner.id,
+        },
+      });
+    }
+
     const auditLog = await tx.auditLog.create({
       data: {
         action: "PROJECT_CREATED",
         entityType: "Project",
         entityId: project.id,
-        userId: owner?.id ?? null,
+        userId: owner.id,
         projectId: project.id,
         details: {
-          message: "Project and initial task created together",
+          message: "Project created successfully",
         },
       },
     });
