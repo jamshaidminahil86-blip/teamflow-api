@@ -39,6 +39,18 @@ The server will run on:
 http://localhost:5000
 ```
 
+## Graceful Shutdown
+
+Stop a local server with `Ctrl+C` to send `SIGINT`. The server stops accepting
+requests, drains existing HTTP connections, then closes the report worker and
+queue, Prisma, and the Redis health-check client. Docker sends `SIGTERM` when
+stopping the API container:
+
+```bash
+docker compose stop -t 15 teamflow-api
+docker compose logs teamflow-api
+```
+
 ## Health Check
 
 ### GET /health

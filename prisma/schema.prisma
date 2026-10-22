@@ -48,6 +48,20 @@ model Project {
   updatedAt   DateTime   @updatedAt
 }
 
+model QueueJob {
+  id          Int       @id @default(autoincrement())
+  jobType     String
+  status      String    @default("PENDING")
+  payload     Json?
+  error       String?
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  @@index([status])
+  @@index([jobType])
+}
+
 model Task {
   id          Int       @id @default(autoincrement())
   title       String

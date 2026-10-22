@@ -1,14 +1,19 @@
+
 import "dotenv/config";
-import app from "./app.js";
-console.log("JWT_SECRET loaded:", Boolean(process.env.JWT_SECRET));
+import app, { redisHealthClient } from "./app.js";
 import fs from "fs/promises";
 import logger from "./utils/logger.js";
-logger.info("Server started");
-logger.error("Test error");
-import { auditEmitter, log } from "./utils/audit.js";
+import { auditEmitter } from "./utils/audit.js";
 import os from "os";
 import crypto from "crypto";
+import prisma from "./config/prisma.js";
+import reportQueue from "./queues/report.queue.js";
+import reportWorker from "./workers/report.worker.js";
 
+console.log("JWT_SECRET loaded:", Boolean(process.env.JWT_SECRET));
+
+logger.info("Server started");
+logger.error("Test error");
 await logger.warn("This is a warning");
 
 const token = crypto.randomBytes(16).toString("hex");
@@ -17,14 +22,12 @@ console.log("Token:", token);
 await fs.writeFile("test.txt", "Hello TeamFlow");
 console.log("File created!");
 
-
 const hash = crypto
   .createHash("sha256")
   .update("hello123")
   .digest("hex");
 
 console.log("Hash:", hash);
-
 console.log("Platform:", os.platform());
 console.log("CPU:", os.cpus().length);
 console.log("Free Memory:", os.freemem());
@@ -44,9 +47,9 @@ auditEmitter.emit("user.deleted", {
   entityId: "456",
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT || 5000);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 });
 
@@ -64,13 +67,30 @@ function closeHttpServer() {
   return new Promise((resolve, reject) => {
     const drainTimer = setTimeout(() => {
       console.warn("HTTP drain timed out. Closing remaining connections.");
+      console.log(
+        "Open HTTP socket count before closeAllConnections():",
+        sockets.size,
+        [...sockets].map(({ remoteAddress, remotePort, destroyed }) => ({
+          remoteAddress,
+          remotePort,
+          destroyed,
+        }))
+      );
       server.closeAllConnections();
+      console.log(
+        "Open HTTP socket count immediately after closeAllConnections():",
+        sockets.size
+      );
       for (const socket of sockets) {
         socket.destroy();
       }
     }, HTTP_DRAIN_TIMEOUT_MS);
 
     server.close((error) => {
+      console.log("server.close() callback invoked.", {
+        error: error?.message,
+        openHttpSockets: sockets.size,
+      });
       clearTimeout(drainTimer);
       if (error) {
         reject(error);
