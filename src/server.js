@@ -49,3 +49,93 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+const sockets = new Set();
+server.on("connection", (socket) => {
+  sockets.add(socket);
+  socket.once("close", () => sockets.delete(socket));
+});
+
+const SHUTDOWN_TIMEOUT_MS = 10000;
+const HTTP_DRAIN_TIMEOUT_MS = 5000;
+let shutdownPromise;
+
+function closeHttpServer() {
+  return new Promise((resolve, reject) => {
+    const drainTimer = setTimeout(() => {
+      console.warn("HTTP drain timed out. Closing remaining connections.");
+      server.closeAllConnections();
+      for (const socket of sockets) {
+        socket.destroy();
+      }
+    }, HTTP_DRAIN_TIMEOUT_MS);
+
+    server.close((error) => {
+      clearTimeout(drainTimer);
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+
+    server.closeIdleConnections();
+  });
+}
+
+async function gracefulShutdown(signal) {
+  if (shutdownPromise) {
+    console.log(`${signal} received while shutdown is already in progress.`);
+    return shutdownPromise;
+  }
+
+  shutdownPromise = (async () => {
+    const errors = [];
+    const forceExitTimer = setTimeout(() => {
+      console.error("Shutdown timed out. Forcing exit.");
+      process.exit(1);
+    }, SHUTDOWN_TIMEOUT_MS);
+
+    console.log(`${signal} received. Starting graceful shutdown...`);
+
+    const runStep = async (name, operation) => {
+      console.log(`${name}...`);
+      try {
+        await operation();
+        console.log(`${name} completed.`);
+      } catch (error) {
+        errors.push(error);
+        console.error(`${name} failed:`, error);
+      }
+    };
+
+    try {
+      await runStep("Closing HTTP server", closeHttpServer);
+
+      await Promise.all([
+        runStep("Closing report worker", () => reportWorker.close()),
+        runStep("Closing report queue", () => reportQueue.close()),
+      ]);
+
+      await runStep("Disconnecting Prisma", () => prisma.$disconnect());
+      await runStep("Closing Redis health-check client", () =>
+        redisHealthClient.disconnect()
+      );
+
+      if (errors.length > 0) {
+        console.error("Graceful shutdown completed with errors.");
+        process.exitCode = 1;
+      } else {
+        console.log("Graceful shutdown completed.");
+        process.exitCode = 0;
+      }
+    } finally {
+      clearTimeout(forceExitTimer);
+    }
+  })();
+
+  return shutdownPromise;
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
